@@ -1,0 +1,200 @@
+
+// C++Project.cpp : Defines the entry point for the console application.
+//
+
+#include "stdafx.h"
+#include <string>
+#include <windows.h>
+#include <iostream>
+#include <conio.h>
+#include <sstream>
+#include <math.h> 
+#include <stdio.h>
+#include <GL/glew.h>
+#include <GL/freeglut.h>
+
+using namespace std;
+
+
+int interval = 1000 / 60;
+int width = 1024;
+int height = 768;
+int score_player1 = -1;
+int score_player2 = 0;
+std::string int2str(int x) {
+	// converts int to string
+	std::stringstream ss;
+	ss << x;
+	return ss.str();
+}
+class racquet {
+public:
+	int width = 20;
+	int height = 80;
+	int speed = 6;
+	float left_x = 10.0f;
+	float left_y = 768 / 2;
+	float right_x = 1024 - 30;
+	float right_y = 768 / 2;
+}_racquet;
+
+class ball {
+public:
+	float y = width / 2;
+	float x = height / 2;
+	float dir_x = -1.0f;
+	float dir_y = 0.0f;
+	int speed = 4;
+	int width = 10;
+	int height = 10;
+}_ball;
+
+void drawText(float x, float y, std::string text) {
+	glRasterPos2f(x, y);
+	glutBitmapString(GLUT_BITMAP_TIMES_ROMAN_24, (const unsigned char*)text.c_str());
+}
+
+void drawRacquet(float x, float y, float width, float height) {
+	glBegin(GL_QUADS);
+	glVertex2f(x, y);
+	glVertex2f(x + width, y);
+	glVertex2f(x + width, y + height);
+	glVertex2f(x, y + height);
+	glEnd();
+}
+
+void Keyboard() {
+	if (_racquet.right_y <= height - _racquet.height && _racquet.right_y >= 0) {
+		if (GetAsyncKeyState(VK_UP)) { _racquet.right_y += _racquet.speed; }
+		if (GetAsyncKeyState(VK_DOWN)) { _racquet.right_y -= _racquet.speed; }
+	}
+	else if (_racquet.right_y >= height - _racquet.height) {
+		if (GetAsyncKeyState(VK_DOWN)) { _racquet.right_y -= _racquet.speed; }
+	}
+	else if (_racquet.right_y <= 0) {
+		if (GetAsyncKeyState(VK_UP)) { _racquet.right_y += _racquet.speed; }
+	}
+
+	if (_racquet.left_y <= height - _racquet.height && _racquet.left_y >= 0) {
+		if (GetAsyncKeyState(0x57)) { _racquet.left_y += _racquet.speed; }
+		if (GetAsyncKeyState(0x53)) { _racquet.left_y -= _racquet.speed; }
+	}
+	else if (_racquet.left_y >= height - _racquet.height) {
+		if (GetAsyncKeyState(0x53)) { _racquet.left_y -= _racquet.speed; }
+	}
+	else if (_racquet.left_y <= 0) {
+		if (GetAsyncKeyState(0x57)) { _racquet.left_y += _racquet.speed; }
+	}
+
+}
+
+void vec2_norm(float& x, float &y) {
+	// sets a vectors length to 1 (which means that x + y == 1)
+	float length = sqrt((x * x) + (y * y));
+	if (length != 0.0f) {
+		length = 1.0f / length;
+		x *= length;
+		y *= length;
+	}
+}
+
+void moveball() {
+	_ball.x += _ball.dir_x * _ball.speed;
+	_ball.y += _ball.dir_y * _ball.speed;
+	if (_ball.x < _racquet.left_x + _racquet.width &&
+		_ball.x > _racquet.left_x &&
+		_ball.y < _racquet.left_y + _racquet.height &&
+		_ball.y > _racquet.left_y) {
+		float t = ((_ball.y - _racquet.left_y) / _racquet.height) - 0.5f;
+		_ball.dir_x = fabs(_ball.dir_x);
+		_ball.dir_y = t;
+	}
+
+	
+	if (_ball.x > _racquet.right_x &&
+		_ball.x < _racquet.right_x + _racquet.width &&
+		_ball.y < _racquet.right_y + _racquet.height &&
+		_ball.y > _racquet.right_y) {
+		float t = ((_ball.y - _racquet.right_y) / _racquet.height) - 0.5f;
+		_ball.dir_x = -fabs(_ball.dir_x);
+		_ball.dir_y = t;
+	}
+
+	if (_ball.x < 0) {
+		++score_player1;
+		_ball.x = width / 2;
+		_ball.y = height / 2;
+		_ball.dir_x = fabs(_ball.dir_x);
+		_ball.dir_y = 0;
+	}
+
+	if (_ball.x > width) {
+		++score_player2;
+		_ball.x = width / 2;
+		_ball.y = height / 2;
+		_ball.dir_x = -fabs(_ball.dir_x);
+		_ball.dir_y = 0;
+	}
+
+	if (_ball.y > height) {
+		_ball.dir_y = -fabs(_ball.dir_y);
+	}
+
+	if (_ball.y < 0) {
+		_ball.dir_y = fabs(_ball.dir_y);
+	}
+
+	// make sure that length of dir stays at 1
+	vec2_norm(_ball.dir_x, _ball.dir_y);
+}
+
+
+static void RenderSceneCB()
+{
+	glClear(GL_COLOR_BUFFER_BIT);
+	glColor3f(1.0f, 1.0f, 0.0f);
+	drawText(width / 2 - 10, height - 20, int2str(score_player1) + ":" + int2str(score_player2));
+	glColor3f(1.0f, 1.0f, 1.0f);
+	drawRacquet(_racquet.right_x, _racquet.right_y, _racquet.width, _racquet.height);
+	drawRacquet(_racquet.left_x, _racquet.left_y, _racquet.width, _racquet.height);
+	drawRacquet(_ball.x, _ball.y, _ball.width, _ball.height);
+	glutSwapBuffers();
+}
+
+void update(int value) {
+	Keyboard();
+	moveball();
+	glutTimerFunc(interval, update, 0);
+	glutPostRedisplay();
+}
+
+
+void enable2D(int width, int height) {
+	glViewport(0, 0, width, height);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(0.0f, width, 0.0f, height, 0.0f, 1.0f);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+}
+
+
+
+int main(int argc, char** argv)
+{
+	glutInit(&argc, argv);
+	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
+	glutInitWindowSize(width, height);
+	glutInitWindowPosition(100, 0);
+	glutCreateWindow("Ping Pong");
+	glutDisplayFunc(RenderSceneCB);
+
+	glutTimerFunc(interval, update, 0);
+
+	enable2D(width, height);
+
+
+	glutMainLoop();
+
+	return 0;
+}
